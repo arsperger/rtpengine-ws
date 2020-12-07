@@ -38,9 +38,11 @@ local params = {
     ["DTLS"] ="passive"
 };
 
---[[ sdp.sdp containes SDP 
+--[[ sdp.sdp containes SDP ]]
 local sdp = rtpengine.offer(call_id, from_tag, to_tag, sdp, params)
+print (sdp.sdp)
 
+--[[
 local parsed_sdp = split_string(sdp.sdp, CRLF)
 
 for k,v in ipairs(parsed_sdp) do
@@ -49,9 +51,7 @@ end
 ]]
 
 --[[ answer test ]]
-local sdp = rtpengine.answer(call_id, from_tag, to_tag, sdp, params)
-
-print (sdp.sdp)
+--local sdp = rtpengine.answer(call_id, from_tag, to_tag, sdp, params)
 --]]
 
 --[[ delete test 

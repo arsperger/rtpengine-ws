@@ -1,9 +1,8 @@
--- This code was shameless taken from: [[ https://gitlab.com/technomancy/jeejah/blob/master/bencode.lua ]]
+-- code is shamelessly taken from: [[ https://gitlab.com/technomancy/jeejah/blob/master/bencode.lua ]]
 
 local encode, decode
 
 local function decode_list(str, t, total_len)
-   -- print("list", str, lume.serialize(t))
    if(str:sub(1,1) == "e") then return t, total_len + 1 end
    local value, v_len = decode(str)
    table.insert(t, value)
@@ -12,7 +11,6 @@ local function decode_list(str, t, total_len)
 end
 
 local function decode_table(str, t, total_len)
-   -- print("table", str, lume.serialize(t))
    if(str:sub(1,1) == "e") then return t, total_len + 1 end
    local key, k_len = decode(str)
    local value, v_len = decode(str:sub(k_len+1))
@@ -23,7 +21,6 @@ local function decode_table(str, t, total_len)
 end
 
 function decode(str)
-   -- print("decoding", str)
    if(str:sub(1,1) == "l") then
       return decode_list(str:sub(2), {}, 1)
    elseif(str:sub(1,1) == "d") then

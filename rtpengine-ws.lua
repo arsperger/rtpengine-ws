@@ -1,10 +1,11 @@
 local websocket = require "http.websocket"
 local bencode = require "bencode"
 
-local result = {result = "", sdp = ""}
+RTPENGINE_WS_HOST = "172.16.238.12"
+RTPENGINE_WS_PORT = "8080"
 
 local connect_data = {
-        url = "ws://172.16.238.12:8080",
+        url = "ws://"..RTPENGINE_WS_HOST..":"..RTPENGINE_WS_PORT,
         subproto = {
                 ng = "ng.rtpengine.com",
                 cli = "cli.rtpengine.com",
@@ -12,7 +13,7 @@ local connect_data = {
 }
 
 local ws_connect = function(connect_data) 
-        WS = websocket.new_from_uri(connect_data.url, { connect_data.subproto.ng })
+        WS = assert(websocket.new_from_uri(connect_data.url, { connect_data.subproto.ng }))
         local con = WS:connect()
         if not con then return false else return true end
 end
@@ -33,38 +34,45 @@ end
 
 local function send_receive(data)
 
+        local res = { result = "", sdp = ""}
+        local cookie = nil;
+        local chk_res = nil;
+
         if not WS then
-                if ws_connect(connect_data) == false then
-                        result.result = "can not connect";
-                        return result
+                if not ws_connect(connect_data) then
+                        res.result = "can not connect";
+                        return res -- (handle errors in proxy script: sl_reply_error, etc)
                 end
         end
 
         local encoded_data = bencode.encode(data);
-        local cookie = get_cookie();
+        cookie = get_cookie();
         local send_data = cookie.." "..encoded_data;
 
         local sent = WS:send(send_data)
         if not sent then 
-                result.result = "can not send data";
-                return result
+                -- FIXME: broken pipe error
+                if not ws_connect(connect_data) then
+                        res.result = "can not connect";
+                        return res
+                else
+                        assert(WS:send(send_data)) 
+                end
         end       
 
         local res = WS:receive()
         if not res then
-                result.result = "can not receive data";
-                return result
+                res.result = "receive error";
+                return res
         end
 
-        local chk_res = split_string(res)
+        chk_res = split_string(res)
 
         if tonumber(chk_res[1]) ~= cookie then
-                result.result = "wrong cookie in response ?";
-                return result
+                res.result = "wrong cookie in response?: "..chk_res[1].." and "..cookie;
+                return res
         end
-
-        assert(WS:close())
-
+        
         return res
 end
 
@@ -80,13 +88,8 @@ local function rtpengine_manage(command, call_id, from_tag, to_tag, sdp, params)
                 data["to-tag"] = to_tag;
         end
         data["sdp"] = sdp;
-    
-        local encoded_data = bencode.encode(data);
-        local cookie = get_cookie();
-        local send_data = cookie.." "..encoded_data;
 
         local res = send_receive(data)
-        -- yes, we decode twice because rtpengine returns cookie
         local result = bencode.decode(bencode.decode(res));
 
         --result = { result = "ok", sdp = "o=1 \r\n.."}
